@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Image sources:
-
+Image sources (see also info message):
+    http://forums.eagle.ru/showthread.php?t=102016
 
 Other's efforts:
     https://github.com/subn3t/warthog
