@@ -18,13 +18,14 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+import re
 from xml.etree import ElementTree
 
-from PIL import (
+from PIL import (  # install with "pip3 install pillow" but import as PIL
     Image,
     ImageDraw,
     ImageFont,
-)  # install with "pip3 install pillow" but import as PIL
+)
 
 # =============================================================================
 # Defaults
@@ -508,19 +509,96 @@ def rgb_tuple_from_csv(text):
 # Helper functions: pillow
 # =============================================================================
 
-def get_text_width_height(font, text):
-    """Return a more accurate (width, height) for a PIL font object than its
-    getsize() method."""
-    if "\n" in text:
-        fragments = text.split("\n")
-        sizes = []
-        for f in fragments:
-            sizes.append(font.getsize(f))
-        textwidth = max([x[0] for x in sizes])
-        textheight = sum([x[1] for x in sizes])
-    else:
-        textwidth, textheight = font.getsize(text)
-    return (textwidth, textheight)
+RE_WHITESPACE = re.compile(r'(\s+)')
+FONT_CACHE = {}
+CHAR_WIDTH_CACHE = {}
+
+
+def word_wrap(text, width, font):
+    # Based on
+    #   http://code.activestate.com/recipes/577946-word-wrap-for-proportional-fonts/  # noqa
+    # ... but updated for Python 3, and using a program-wide (rather than
+    #     a function-local) font/character-size cache, which speeds it up a lot
+    '''
+    Word wrap function / algorithm for wrapping text using proportional (versus
+    fixed-width) fonts.
+
+    `text`: a string of text to wrap
+    `width`: the width in pixels to wrap to
+    `extent_func`: a function that returns a (w, h) tuple given any string, to
+                   specify the size (text extent) of the string when rendered.
+                   the algorithm only uses the width.
+
+    Returns a list of strings, one for each line after wrapping.
+    '''
+    lines = []
+    pattern = RE_WHITESPACE
+    lookup = dict((c, get_char_width(c, font)) for c in set(text))
+    # ... looks up with width of each character
+    for line in text.splitlines():
+        tokens = pattern.split(line)
+        tokens.append('')
+        widths = [sum(lookup[c] for c in token) for token in tokens]
+        start, total = 0, 0
+        for index in range(0, len(tokens), 2):
+            if total + widths[index] > width:
+                end = index + 2 if index == start else index
+                lines.append(''.join(tokens[start:end]))
+                start, total = end, 0
+                if end == index + 2:
+                    continue
+            total += widths[index] + widths[index + 1]
+        if start < len(tokens):
+            lines.append(''.join(tokens[start:]))
+    lines = [line.strip() for line in lines]
+    return lines or ['']
+
+
+def word_wrap_2(text, width, img, font):
+    text = " ".join(text.split("\n"))
+    lines = word_wrap(text, width, font)
+    wrapped = "\n".join(lines)
+    # logger.debug("word_wrap_2: {} -> {}".format(repr(text), repr(wrapped)))
+    return wrapped
+
+
+def get_font(ttf, fontsize):
+    """
+    Makes the error message clearer if we fail.
+    Also caches the fonts.
+    """
+    if (ttf, fontsize) in FONT_CACHE:
+        return FONT_CACHE[(ttf, fontsize)]
+    try:
+        font = ImageFont.truetype(ttf, fontsize)
+    except:
+        logger.error("Failed to load font!")
+        raise
+    FONT_CACHE[(ttf, fontsize)] = font
+    return font
+
+
+def get_char_width(c, font):
+    """
+    Caches character widths
+    """
+    if (c, font) in CHAR_WIDTH_CACHE:
+        return CHAR_WIDTH_CACHE[(c, font)]
+    width = font.getsize(c)[0]
+    CHAR_WIDTH_CACHE[(c, font)] = width
+    return width
+
+
+def get_align_from_hjust(hjust):
+    """
+        0 -> 'left', 0.5 -> 'center', 1 -> 'right'
+        ... and in-between things similarly
+    """
+    if hjust <= 0.25:
+        return 'left'
+    elif hjust >= 0.75:
+        return 'right'
+    return 'center'
 
 
 def composite_side_by_side(joinedfilename, filenames):
@@ -565,39 +643,71 @@ def add_label(img, text, x, y, ttf, fontsize, rgb,
               hjust=0, vjust=0):
     """Adds a label to an image."""
     draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.truetype(ttf, fontsize)
-    except:
-        logger.error("Failed to load font!")
-        raise
-    w, h = get_text_width_height(font, text)
+    font = get_font(ttf, fontsize)
+    w, h = draw.textsize(text, font)
     x = justify_to_point(x, w, hjust)
     y = justify_to_point(y, h, vjust)
-    draw.text((x, y), text, rgb, font=font)
+    draw.multiline_text((x, y), text, rgb, font=font,
+                        align=get_align_from_hjust(hjust))
 
 
 def add_boxed_text(img, text, boxcoords, ttf, rgb,
-                   showrect=False, hjust=0.5, vjust=0.5):
+                   showrect=False, hjust=0.5, vjust=0.5, wrap=False,
+                   font_trial_step_size=5):
     """Adds text to an image, within a notional rectangle."""
     logger.debug("add_boxed_text: text={}, boxcoords={}".format(
         repr(text), repr(boxcoords)))
     draw = ImageDraw.Draw(img)
     boxleft, boxtop, boxwidth, boxheight = boxcoords
     BASE_FONTSIZE = 16
-    try:
-        font = ImageFont.truetype(ttf, BASE_FONTSIZE)
-    except:
-        logger.error("Failed to load font!")
-        raise
-    basetextwidth, basetextheight = get_text_width_height(font, text)
-    if basetextwidth/boxwidth > basetextheight/boxheight:
-        # Text is wider (as a proportion of the box) than tall.
-        fontsize = int(BASE_FONTSIZE * boxwidth/basetextwidth)
+    if wrap:
+        # Tricky.
+        # Start with an arbitrary font size.
+        # Wrap (to box width) and calculate size.
+        # If either width or height is exceeded, drop down.
+        # If neither is, record this font size and increase.
+        # If we end up retrying one that worked, use it.
+        # This was all a bit slow, until we cached the font size.
+        cache_wrapped = {}
+        cache_font = {}
+        successful_sizes = []
+        unsuccessful_sizes = []
+        fontsize = BASE_FONTSIZE
+        while fontsize not in successful_sizes:
+            if fontsize in unsuccessful_sizes:
+                fontsize -= 1
+                continue
+            # logger.debug("Trying fontsize: {}".format(fontsize))
+            font = get_font(ttf, fontsize)
+            cache_font[fontsize] = font
+            wrapped_text = word_wrap_2(text, boxwidth, img, font)
+            textwidth, textheight = draw.textsize(wrapped_text, font)
+            if textwidth > boxwidth or textheight > boxheight:
+                unsuccessful_sizes.append(fontsize)
+                fontsize -= 1
+            else:
+                successful_sizes.append(fontsize)
+                cache_font[fontsize] = font
+                cache_wrapped[fontsize] = wrapped_text
+                fontsize += font_trial_step_size  # can go up in bigger steps
+        logger.debug("Wrapped final font size: {}".format(fontsize))
+        font = cache_font[fontsize]
+        text = cache_wrapped[fontsize]
     else:
-        # Text is taller (as a proportion of the box) than wide.
-        fontsize = int(BASE_FONTSIZE * boxheight/basetextheight)
-    font = ImageFont.truetype(ttf, fontsize)
-    textwidth, textheight = get_text_width_height(font, text)
+        # The text itself is not altered.
+        # Start with an arbitrary BASE_FONTSIZE.
+        # Calculate the size of the text in that font.
+        # Rescale the font size proportionally to a font that'll fit.
+        font = get_font(ttf, BASE_FONTSIZE)
+        basetextwidth, basetextheight = draw.textsize(text, font)
+        if basetextwidth/boxwidth > basetextheight/boxheight:
+            # Text is wider (as a proportion of the box) than tall.
+            fontsize = int(BASE_FONTSIZE * boxwidth/basetextwidth)
+        else:
+            # Text is taller (as a proportion of the box) than wide.
+            fontsize = int(BASE_FONTSIZE * boxheight/basetextheight)
+        font = get_font(ttf, fontsize)
+    textwidth, textheight = draw.textsize(text, font)
     logger.debug("Final fontsize {} (text width {}, text height {})".format(
         fontsize, textwidth, textheight))
     if showrect:
@@ -608,7 +718,8 @@ def add_boxed_text(img, text, boxcoords, ttf, rgb,
         )
     x = justify_to_box(boxleft, boxwidth, textwidth, hjust)
     y = justify_to_box(boxtop, boxheight, textheight, vjust)
-    draw.text((x, y), text, rgb, font=font)
+    draw.multiline_text((x, y), text, rgb, font=font,
+                        align=get_align_from_hjust(hjust))
 
 
 # =============================================================================
@@ -716,11 +827,15 @@ def make_picture(descmap, placemap, template, outfile, cmdargs,
             else:
                 rgb = cmdargs.rgbmomentary
             boxcoords = (boxleft, boxtop, boxwidth, boxheight)
-            desc = "\n".join(desclist)
+            if cmdargs.wrap:
+                desc = " ● ".join(desclist)
+            else:
+                desc = "\n".join(desclist)
             add_boxed_text(img, desc, boxcoords, cmdargs.ttf, rgb,
                            showrect=cmdargs.showrects,
                            hjust=info.get('hjust', 0.5),
-                           vjust=info.get('vjust', 0.5))
+                           vjust=info.get('vjust', 0.5),
+                           wrap=cmdargs.wrap)
     for el in extralabels:
         add_label(img, el['text'], el['x'], el['y'], cmdargs.ttf,
                   el['fontsize'], el['rgb'],
@@ -810,6 +925,8 @@ if __name__ == '__main__':
         '--ttf', default=DEFAULT_TRUETYPE_FILE,
         help="TrueType font file (default: {})".format(DEFAULT_TRUETYPE_FILE))
     parser.add_argument('--verbose', action='count', default=0, help="Verbose")
+    parser.add_argument(
+        '--wrap', action='count', default=0, help="Wrap text lines")
     args = parser.parse_args()
 
     assert args.input is not None or args.format == 'demo', (
