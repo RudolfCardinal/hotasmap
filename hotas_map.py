@@ -7,6 +7,17 @@ Image sources (see also info message):
 Other's efforts:
     https://github.com/subn3t/warthog
     ... at http://subn3t.com/warthog/  -- doesn't do all the keys!
+
+VERSION HISTORY
+
+* 2015-02-08
+
+  - Word wrap.
+
+* 2015-02-07
+
+  - Created.
+
 """
 
 # =============================================================================
