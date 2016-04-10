@@ -18,6 +18,10 @@ VERSION HISTORY
 
   - Created.
 
+* 2016-04-10
+
+  - PyCharm code cleanup.
+
 """
 
 # =============================================================================
@@ -27,16 +31,17 @@ VERSION HISTORY
 import argparse
 import json
 import logging
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 import re
 from xml.etree import ElementTree
 
-from PIL import (  # install with "pip3 install pillow" but import as PIL
+from PIL import (  # install with "pip install pillow" but import as PIL
     Image,
     ImageDraw,
     ImageFont,
 )
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 # =============================================================================
 # Defaults
@@ -180,13 +185,13 @@ MFG_CROSSWIND_MAP = {
 }
 CROSSWIND_EXTRA_LABELS = [
     dict(text='Pedals: Rudder',
-         x=300, y=1850 + J_HEIGHT/2, fontsize=20, rgb=(0, 0, 0),
+         x=300, y=1850 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
          hjust=1, vjust=0.5),
     dict(text='Pedals: Left footbrake',
-         x=300, y=1925 + J_HEIGHT/2, fontsize=20, rgb=(0, 0, 0),
+         x=300, y=1925 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
          hjust=1, vjust=0.5),
     dict(text='Pedals: Right footbrake',
-         x=300, y=2000 + J_HEIGHT/2, fontsize=20, rgb=(0, 0, 0),
+         x=300, y=2000 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
          hjust=1, vjust=0.5),
 ]
 TMW_THROTTLE_MAP = {
@@ -404,7 +409,6 @@ ED_LABEL_MAP = {
     'SelectTarget': 'Target ahead',
     'SetSpeed100': 'Speed 100%',
     'SetSpeed25': 'Speed 25%',
-    'SetSpeed25': 'Speed 25%',
     'SetSpeed50': 'Speed 50%',
     'SetSpeed75': 'Speed 75%',
     'SetSpeedMinus100': 'Speed –100%',
@@ -530,7 +534,7 @@ def word_wrap(text, width, font):
     #   http://code.activestate.com/recipes/577946-word-wrap-for-proportional-fonts/  # noqa
     # ... but updated for Python 3, and using a program-wide (rather than
     #     a function-local) font/character-size cache, which speeds it up a lot
-    '''
+    """
     Word wrap function / algorithm for wrapping text using proportional (versus
     fixed-width) fonts.
 
@@ -541,7 +545,7 @@ def word_wrap(text, width, font):
                    the algorithm only uses the width.
 
     Returns a list of strings, one for each line after wrapping.
-    '''
+    """
     lines = []
     pattern = RE_WHITESPACE
     lookup = dict((c, get_char_width(c, font)) for c in set(text))
@@ -565,7 +569,7 @@ def word_wrap(text, width, font):
     return lines or ['']
 
 
-def word_wrap_2(text, width, img, font):
+def word_wrap_2(text, width, font):
     text = " ".join(text.split("\n"))
     lines = word_wrap(text, width, font)
     wrapped = "\n".join(lines)
@@ -628,7 +632,7 @@ def composite_side_by_side(joinedfilename, filenames):
     joined.save(joinedfilename)
 
 
-def justify_to_point(point, itemsize, just=0):
+def justify_to_point(point, itemsize, just=0.0):
     """
     just:
         0 = left/top
@@ -643,7 +647,7 @@ def justify_to_point(point, itemsize, just=0):
     return point - itemsize * just
 
 
-def justify_to_box(boxstart, boxsize, itemsize, just=0):
+def justify_to_box(boxstart, boxsize, itemsize, just=0.0):
     """
     Justifies, similarly, but within a box.
     """
@@ -670,7 +674,7 @@ def add_boxed_text(img, text, boxcoords, ttf, rgb,
         repr(text), repr(boxcoords)))
     draw = ImageDraw.Draw(img)
     boxleft, boxtop, boxwidth, boxheight = boxcoords
-    BASE_FONTSIZE = 16
+    base_fontsize = 16
     if wrap:
         # Tricky.
         # Start with an arbitrary font size.
@@ -683,7 +687,7 @@ def add_boxed_text(img, text, boxcoords, ttf, rgb,
         cache_font = {}
         successful_sizes = []
         unsuccessful_sizes = []
-        fontsize = BASE_FONTSIZE
+        fontsize = base_fontsize
         while fontsize not in successful_sizes:
             if fontsize in unsuccessful_sizes:
                 fontsize -= 1
@@ -691,7 +695,7 @@ def add_boxed_text(img, text, boxcoords, ttf, rgb,
             # logger.debug("Trying fontsize: {}".format(fontsize))
             font = get_font(ttf, fontsize)
             cache_font[fontsize] = font
-            wrapped_text = word_wrap_2(text, boxwidth, img, font)
+            wrapped_text = word_wrap_2(text, boxwidth, font)
             textwidth, textheight = draw.textsize(wrapped_text, font)
             if textwidth > boxwidth or textheight > boxheight:
                 unsuccessful_sizes.append(fontsize)
@@ -706,17 +710,17 @@ def add_boxed_text(img, text, boxcoords, ttf, rgb,
         text = cache_wrapped[fontsize]
     else:
         # The text itself is not altered.
-        # Start with an arbitrary BASE_FONTSIZE.
+        # Start with an arbitrary base_fontsize.
         # Calculate the size of the text in that font.
         # Rescale the font size proportionally to a font that'll fit.
-        font = get_font(ttf, BASE_FONTSIZE)
+        font = get_font(ttf, base_fontsize)
         basetextwidth, basetextheight = draw.textsize(text, font)
-        if basetextwidth/boxwidth > basetextheight/boxheight:
+        if basetextwidth / boxwidth > basetextheight / boxheight:
             # Text is wider (as a proportion of the box) than tall.
-            fontsize = int(BASE_FONTSIZE * boxwidth/basetextwidth)
+            fontsize = int(base_fontsize * boxwidth / basetextwidth)
         else:
             # Text is taller (as a proportion of the box) than wide.
-            fontsize = int(BASE_FONTSIZE * boxheight/basetextheight)
+            fontsize = int(base_fontsize * boxheight / basetextheight)
         font = get_font(ttf, fontsize)
     textwidth, textheight = draw.textsize(text, font)
     logger.debug("Final fontsize {} (text width {}, text height {})".format(
@@ -777,8 +781,8 @@ def get_mapping(cmdargs):
         for node in nodes:
             for childbit in ['Primary', 'Secondary', 'Binding']:
                 child = node.find("./" + childbit)
-                if child is not None and (cmdargs.ed_horizons
-                                          or node.tag not in ED_HORIZONS):
+                if child is not None and (cmdargs.ed_horizons or
+                                          node.tag not in ED_HORIZONS):
                     process_ed_xml_node(node.tag, child, masterdict, cmdargs)
         return masterdict
     else:
@@ -830,10 +834,10 @@ def make_picture(descmap, placemap, template, outfile, cmdargs,
             boxtop = info['t']
             boxwidth = info['w']
             boxheight = info['h']
-            type = info.get('type')
-            if type == ANALOGUE:
+            type_ = info.get('type')
+            if type_ == ANALOGUE:
                 rgb = cmdargs.rgbanalogue
-            elif type == STICKY:
+            elif type_ == STICKY:
                 rgb = cmdargs.rgbsticky
             else:
                 rgb = cmdargs.rgbmomentary
@@ -859,20 +863,20 @@ def make_picture(descmap, placemap, template, outfile, cmdargs,
 # Main
 # =============================================================================
 
-if __name__ == '__main__':
-        # Fetch command-line options.
-    silent = False
+def main():
+    # Fetch command-line options.
     parser = argparse.ArgumentParser(
         description="Generate Thrustmaster Warthog binding pictures. "
-        "For a simple example, run with the arguments '--format demo' only."
+                    "For a simple example, run with the arguments "
+                    "'--format demo' only."
     )
     parser.add_argument(
         '--format', default="json", choices=['json', 'ed', 'demo'],
         required=True,
         help="Input format. Possible values: "
-        "'json' (same format as produced by --showmapping); "
-        "'ed' (Elite Dangerous .binds file); "
-        "'demo' (simple demonstration)")
+             "'json' (same format as produced by --showmapping); "
+             "'ed' (Elite Dangerous .binds file); "
+             "'demo' (simple demonstration)")
     parser.add_argument(
         '--input', default=None,
         help="Input file (unless 'demo' mode is used)")
@@ -899,15 +903,15 @@ if __name__ == '__main__':
     parser.add_argument(
         '--ed_tmw_stick', default=DEFAULT_ED_STICK,
         help="Elite Dangerous device name for Thrustmaster Warthog joystick "
-        "(default: {})".format(DEFAULT_ED_STICK))
+             "(default: {})".format(DEFAULT_ED_STICK))
     parser.add_argument(
         '--ed_tmw_throttle', default=DEFAULT_ED_THROTTLE,
         help="Elite Dangerous device name for Thrustmaster Warthog throttle/"
-        "control panel (default: {})".format(DEFAULT_ED_THROTTLE))
+             "control panel (default: {})".format(DEFAULT_ED_THROTTLE))
     parser.add_argument(
         '--ed_mfg_crosswind', default=DEFAULT_ED_MFG_CROSSWIND_NAME,
         help="Elite Dangerous device name for MFG Crosswind rudder pedals "
-        "(default: {})".format(DEFAULT_ED_MFG_CROSSWIND_NAME))
+             "(default: {})".format(DEFAULT_ED_MFG_CROSSWIND_NAME))
     parser.add_argument(
         '--ed_horizons', action='store_true',
         help="Include bindings for Elite Dangerous: Horizons (lander buggy)")
@@ -919,13 +923,13 @@ if __name__ == '__main__':
         '--rgbmomentary', type=rgb_tuple_from_csv,
         default=DEFAULT_RGB_MOMENTARY,
         help="RGB colours for momentary switches (switches that deactivate "
-        "when released; default: {})".format(
-            DEFAULT_RGB_MOMENTARY))
+             "when released; default: {})".format(DEFAULT_RGB_MOMENTARY))
     parser.add_argument(
         '--rgbsticky', type=rgb_tuple_from_csv, default=DEFAULT_RGB_STICKY,
-        help="RGB colours for sticky switches (switches that keep their "
-        "position when released; default: {})".format(
-            DEFAULT_RGB_STICKY))
+        help=(
+            "RGB colours for sticky switches (switches that keep their "
+            "position when released; default: {})".format(
+                DEFAULT_RGB_STICKY)))
     parser.add_argument(
         '--showmapping', action='store_true',
         help="Print mapping to stdout")
@@ -968,3 +972,7 @@ if __name__ == '__main__':
                  args)
     composite_side_by_side(args.compout,
                            [args.throtout, args.joyout])
+
+
+if __name__ == '__main__':
+    main()
