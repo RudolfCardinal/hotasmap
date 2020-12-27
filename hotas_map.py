@@ -1170,10 +1170,8 @@ def main():
 
 (3) As input, it can take a JSON mapping:
         {progname} --format json --input MYFILE.json
- 
     or an Elite:Dangerous bind file:
         {progname} --format ed --INPUT Custom.2.0.binds
-    
     For Elite, the best thing to do is to create the bindings within Elite
     itself, then aim this script at the custom binding file.
 
@@ -1182,8 +1180,9 @@ def main():
     Usually it is in
         %USERPROFILE%\AppData\local\Frontier Developments\Elite Dangerous\Options\Bindings
 
-        """.format(progname=sys.argv[0]).strip(),  # noqa
+        """.format(progname=os.path.basename(sys.argv[0])).strip(),  # noqa
         formatter_class=RawDescriptionArgumentDefaultsHelpFormatter
+        # formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     input_group = parser.add_argument_group("Input options")
