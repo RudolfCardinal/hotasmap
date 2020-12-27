@@ -62,8 +62,7 @@ from PIL import (  # install with "pip install pillow" but import as PIL
     ImageFont,
 )
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+log = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -129,6 +128,10 @@ STICKY = '+'
 # Devices, with mappings to picture coordinates, Elite Dangerous switch names,
 # etc.
 # =============================================================================
+
+# -----------------------------------------------------------------------------
+# Thrustmaster HOTAS Warthog: joystick
+# -----------------------------------------------------------------------------
 
 TMW_STICK_MAP = {
     # Dictionary attributes:
@@ -219,30 +222,10 @@ TMW_STICK_EXTRA_LABELS = [
          hjust=1, vjust=0.5),
 ]
 
-MFG_CROSSWIND_MAP = {
-    # These are specials from the MFG Crosswind:
-    'Rudder': dict(
-        l=325, t=1850, w=J_WIDTH, h=J_HEIGHT, hjust=0,
-        ed='Joy_RZAxis', type=ANALOGUE),
-    'LeftFootbrake': dict(
-        l=325, t=1925, w=J_WIDTH, h=J_HEIGHT, hjust=0,
-        ed='Joy_XAxis', type=ANALOGUE),
-    'RightFootbrake': dict(
-        l=325, t=2000, w=J_WIDTH, h=J_HEIGHT, hjust=0,
-        ed='Joy_YAxis', type=ANALOGUE),
-}
 
-CROSSWIND_EXTRA_LABELS = [
-    dict(text='Pedals: Rudder\n(Z rotation)',
-         x=300, y=1850 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
-         hjust=1, vjust=0.5),
-    dict(text='Pedals: Left footbrake\n(X axis)',
-         x=300, y=1925 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
-         hjust=1, vjust=0.5),
-    dict(text='Pedals: Right footbrake\n(Y axis)',
-         x=300, y=2000 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
-         hjust=1, vjust=0.5),
-]
+# -----------------------------------------------------------------------------
+# Thrustmaster HOTAS Warthog: throttle
+# -----------------------------------------------------------------------------
 
 TMW_THROTTLE_MAP = {
     # overall image size is 1625 x 2201
@@ -363,6 +346,36 @@ TMW_THROTTLE_EXTRA_LABELS = [
     dict(text='(Z rotation)',  # left throttle (shown on the right)
          x=1320, y=2115, fontsize=20, rgb=(0, 0, 0),
          hjust=0, vjust=0.5),
+]
+
+
+# -----------------------------------------------------------------------------
+# MFG Crosswind rudder pedals
+# -----------------------------------------------------------------------------
+
+MFG_CROSSWIND_MAP = {
+    # These are specials from the MFG Crosswind:
+    'Rudder': dict(
+        l=325, t=1850, w=J_WIDTH, h=J_HEIGHT, hjust=0,
+        ed='Joy_RZAxis', type=ANALOGUE),
+    'LeftFootbrake': dict(
+        l=325, t=1925, w=J_WIDTH, h=J_HEIGHT, hjust=0,
+        ed='Joy_XAxis', type=ANALOGUE),
+    'RightFootbrake': dict(
+        l=325, t=2000, w=J_WIDTH, h=J_HEIGHT, hjust=0,
+        ed='Joy_YAxis', type=ANALOGUE),
+}
+
+CROSSWIND_EXTRA_LABELS = [
+    dict(text='Pedals: Rudder\n(Z rotation)',
+         x=300, y=1850 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
+         hjust=1, vjust=0.5),
+    dict(text='Pedals: Left footbrake\n(X axis)',
+         x=300, y=1925 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
+         hjust=1, vjust=0.5),
+    dict(text='Pedals: Right footbrake\n(Y axis)',
+         x=300, y=2000 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
+         hjust=1, vjust=0.5),
 ]
 
 
@@ -658,7 +671,7 @@ def get_font(ttf: str, fontsize: float) -> ImageFont:
     try:
         font = ImageFont.truetype(ttf, fontsize)
     except Exception:
-        logger.error("Failed to load font!")
+        log.error("Failed to load font!")
         raise
     FONT_CACHE[(ttf, fontsize)] = font
     return font
@@ -694,15 +707,15 @@ def composite_side_by_side(
     Creates a composite image (on disk) of two or more images (specified by
     their filenames) side-by-side.
     """
-    logger.info("Compositing {} -> {}".format(filenames, joinedfilename))
+    log.info("Compositing {} -> {}".format(filenames, joinedfilename))
     images = [Image.open(f) for f in filenames]
     width = sum(i.size[0] for i in images)
     height = max(i.size[1] for i in images)
-    logger.debug("width={}, height={}".format(width, height))
+    log.debug("width={}, height={}".format(width, height))
     joined = Image.new('RGB', (width, height))
     x = 0
     for i in images:
-        logger.debug("pasting at x={}".format(x))
+        log.debug("pasting at x={}".format(x))
         joined.paste(i, (x, 0))
         x += i.size[0]
     joined.save(joinedfilename)
@@ -783,8 +796,10 @@ def add_boxed_text(
     """
     Adds text to an image, within a notional rectangle.
     """
-    logger.debug("add_boxed_text: text={}, boxcoords={}".format(
+    log.debug("add_boxed_text: text={}, boxcoords={}".format(
         repr(text), repr(boxcoords)))
+    if not text:
+        return
     draw = ImageDraw.Draw(img)
     boxleft, boxtop, boxwidth, boxheight = boxcoords
     base_fontsize = 16
@@ -818,7 +833,7 @@ def add_boxed_text(
                 cache_font[fontsize] = font
                 cache_wrapped[fontsize] = wrapped_text
                 fontsize += font_trial_step_size  # can go up in bigger steps
-        logger.debug("Wrapped final font size: {}".format(fontsize))
+        log.debug("Wrapped final font size: {}".format(fontsize))
         font = cache_font[fontsize]
         text = cache_wrapped[fontsize]
     else:
@@ -836,7 +851,7 @@ def add_boxed_text(
             fontsize = int(base_fontsize * boxheight / basetextheight)
         font = get_font(ttf, fontsize)
     textwidth, textheight = draw.textsize(text, font)
-    logger.debug("Final fontsize {} (text width {}, text height {})".format(
+    log.debug("Final fontsize {} (text width {}, text height {})".format(
         fontsize, textwidth, textheight))
     if showrect:
         draw.rectangle(
@@ -859,6 +874,7 @@ class InputFormat(Enum):
     Input format mode.
     """
     blank = "Create a blank mapping (for pen-and-paper editing)"
+    debug = "Fill all boxes with text"
     demo = "Demonstrate by printing switch names"
     ed = "Elite:Dangerous binding file (.binds)"
     json = "JSON (.json; same format produced by --showmapping)"
@@ -879,12 +895,14 @@ class Config:
     # Cosmetic options
     title: Optional[str]
     subtitle: Optional[str]
+    extra_text: Optional[str]
     rgbtitle: Tuple[int, int, int]
     rgbanalogue: Tuple[int, int, int]
     rgbmomentary: Tuple[int, int, int]
     rgbsticky: Tuple[int, int, int]
     ttf: str
     wrap: bool
+    wrap_linesep: str
 
     # Debug options
     showmapping: bool
@@ -892,7 +910,11 @@ class Config:
     verbose: bool
 
     def __post_init__(self) -> None:
-        allowed_no_input = [InputFormat.blank, InputFormat.demo]
+        allowed_no_input = [
+            InputFormat.blank,
+            InputFormat.debug,
+            InputFormat.demo
+        ]
         assert self.input is not None or self.format in allowed_no_input, (
             f"Must specify input unless using modes "
             f"{[x.name for x in allowed_no_input]}; "
@@ -904,18 +926,18 @@ class Config:
 # Core processing functions
 # =============================================================================
 
-def make_title_labels(config: Config) -> List[Dict[str, Any]]:
+def make_extra_rhs_labels(config: Config) -> List[Dict[str, Any]]:
     """
-    Returns extra labels, in our standard dictionary format, for titles.
+    Creates extra labels for the right-hand (joystick) figure.
     """
     labels = []  # type: List[Dict[str, Any]]
-    x_left = 50
-    y_start = 50
+    title_x_left = 50
+    title_y_start = 50
     if config.title:
         labels.append(dict(
             text=config.title,
-            x=x_left,
-            y=y_start,
+            x=title_x_left,
+            y=title_y_start,
             fontsize=40,
             rgb=config.rgbtitle,
             hjust=0,
@@ -924,14 +946,39 @@ def make_title_labels(config: Config) -> List[Dict[str, Any]]:
     if config.subtitle:
         labels.append(dict(
             text=config.subtitle,
-            x=x_left,
-            y=y_start + 50,
+            x=title_x_left,
+            y=title_y_start + 50,
+            fontsize=30,
+            rgb=config.rgbtitle,
+            hjust=0,
+            vjust=0
+        ))
+    if config.extra_text:
+        labels.append(dict(
+            text=config.extra_text,
+            x=975,
+            y=1000,
             fontsize=30,
             rgb=config.rgbtitle,
             hjust=0,
             vjust=0
         ))
     return labels
+
+
+def complete_blanks(masterdict: Dict[str, Dict[str, Any]]):
+    """
+    Populates unused options.
+    """
+    name_mapdict_tuples = (
+        (TMW_STICK_NAME, TMW_STICK_MAP),
+        (TMW_THROTTLE_NAME, TMW_THROTTLE_MAP),
+        (MFG_CROSSWIND_NAME, MFG_CROSSWIND_MAP),
+    )
+    for name, mapdict in name_mapdict_tuples:
+        devicedict = masterdict.setdefault(name, {})
+        for k in mapdict.keys():
+            devicedict.setdefault(k, [])
 
 
 def get_mapping(config: Config) -> Dict[str, Dict[str, Any]]:
@@ -944,24 +991,43 @@ def get_mapping(config: Config) -> Dict[str, Dict[str, Any]]:
         TMW_THROTTLE_NAME: {},
         MFG_CROSSWIND_NAME: {},
     }
-    if config.format == InputFormat.json:
-        logger.info("Using JSON input file {}".format(config.input))
-        json_data = open(config.input).read()
-        return json.loads(json_data)
-    elif config.format == InputFormat.blank:
-        logger.info("Using blank mapping")
-        return masterdict
+    if config.format == InputFormat.blank:
+        log.info("Using blank mapping")
+    elif config.format == InputFormat.debug:
+        log.info("Using layout debug mapping")
+        v = [
+            "1 2 3 4 5 6 7 8 9 0",
+            "A B C D E F G H I J",
+            "a b c d e f g h i j",
+            "N M O P Q R S T U V",
+            "n m o p q r s t u v"
+        ]
+        masterdict = {
+            TMW_STICK_NAME: dict([
+                (k, v) for k in TMW_STICK_MAP.keys()
+            ]),
+            TMW_THROTTLE_NAME: dict([
+                (k, v) for k in TMW_THROTTLE_MAP.keys()
+            ]),
+            MFG_CROSSWIND_NAME: dict([
+                (k, v) for k in MFG_CROSSWIND_MAP.keys()
+            ]),
+        }
     elif config.format == InputFormat.demo:
-        logger.info("Using demo mapping")
-        return {
-            TMW_STICK_NAME: dict([(k, [k]) for k in TMW_STICK_MAP.keys()]),
-            TMW_THROTTLE_NAME: dict([(k, [k])
-                                     for k in TMW_THROTTLE_MAP.keys()]),
-            MFG_CROSSWIND_NAME: dict([(k, [k])
-                                      for k in MFG_CROSSWIND_MAP.keys()]),
+        log.info("Using demo mapping")
+        masterdict = {
+            TMW_STICK_NAME: dict([
+                (k, [k]) for k in TMW_STICK_MAP.keys()
+            ]),
+            TMW_THROTTLE_NAME: dict([
+                (k, [k]) for k in TMW_THROTTLE_MAP.keys()
+            ]),
+            MFG_CROSSWIND_NAME: dict([
+                (k, [k]) for k in MFG_CROSSWIND_MAP.keys()
+            ]),
         }
     elif config.format == InputFormat.ed:
-        logger.info("Using Elite Dangerous binding file {}".format(
+        log.info("Using Elite Dangerous binding file {}".format(
             config.input))
         tree = ElementTree.parse(config.input)
         root = tree.getroot()
@@ -977,16 +1043,22 @@ def get_mapping(config: Config) -> Dict[str, Dict[str, Any]]:
         # Some have 'Buggy' in them... presumably relate to a rover buggy
         # on planetary surfaces, rather than duff keys!
         nodes = root.findall("./*")
-        logger.debug("XML nodes: {}".format(nodes))
+        log.debug("XML nodes: {}".format(nodes))
         for node in nodes:
             for childbit in ['Primary', 'Secondary', 'Binding']:
                 child = node.find("./" + childbit)
                 if child is not None and (config.ed_horizons or
                                           node.tag not in ED_HORIZONS):
                     process_ed_xml_node(node.tag, child, masterdict, config)
-        return masterdict
+        complete_blanks(masterdict)
+    elif config.format == InputFormat.json:
+        log.info("Using JSON input file {}".format(config.input))
+        json_data = open(config.input).read()
+        masterdict = json.loads(json_data)
+        complete_blanks(masterdict)
     else:
         assert False, "Bad input format: {}".format(config.format)
+    return masterdict
 
 
 def process_ed_xml_node(
@@ -999,7 +1071,7 @@ def process_ed_xml_node(
     """
     device = node.attrib['Device']
     key = node.attrib['Key']
-    logger.debug("Processing node: {}, device={}, key={}".format(
+    log.debug("Processing node: {}, device={}, key={}".format(
         parenttag, device, key))
     if device == config.ed_tmw_stick:
         refmap = TMW_STICK_MAP
@@ -1014,7 +1086,7 @@ def process_ed_xml_node(
         return
     for ourkey, ourdict in refmap.items():
         if ourdict.get('ed') == key:
-            logger.debug("Found: ourkey={}".format(ourkey))
+            log.debug("Found: ourkey={}".format(ourkey))
             if ourkey not in refdict:
                 refdict[ourkey] = []
             nicelabel = ED_LABEL_MAP.get(parenttag, parenttag)
@@ -1044,10 +1116,10 @@ def make_picture(
             list of extra label dictionaries
     """
     extralabels = extralabels or []
-    logger.info("Opening template: {}".format(template))
+    log.info("Opening template: {}".format(template))
     img = Image.open(template)
-    logger.debug("Image size: {}".format(img.size))
-    logger.debug("descmap: {}".format(descmap))
+    log.debug("Image size: {}".format(img.size))
+    log.debug("descmap: {}".format(descmap))
     for key, desclist in descmap.items():
         if key in placemap:
             info = placemap[key]
@@ -1064,7 +1136,7 @@ def make_picture(
                 rgb = config.rgbmomentary
             boxcoords = (boxleft, boxtop, boxwidth, boxheight)
             if config.wrap:
-                desc = " ● ".join(desclist)
+                desc = config.wrap_linesep.join(desclist)
             else:
                 desc = "\n".join(desclist)
             add_boxed_text(img, desc, boxcoords, config.ttf, rgb,
@@ -1076,7 +1148,7 @@ def make_picture(
         add_label(img, el['text'], el['x'], el['y'], config.ttf,
                   el['fontsize'], el['rgb'],
                   hjust=el.get('hjust', 0), vjust=el.get('vjust', 0))
-    logger.info("Saving to: {}".format(outfile))
+    log.info("Saving to: {}".format(outfile))
     img.save(outfile)
 
 
@@ -1110,7 +1182,7 @@ def main():
     Usually it is in
         %USERPROFILE%\AppData\local\Frontier Developments\Elite Dangerous\Options\Bindings
 
-        """.format(progname=sys.argv[0]).strip(),
+        """.format(progname=sys.argv[0]).strip(),  # noqa
         formatter_class=RawDescriptionArgumentDefaultsHelpFormatter
     )
 
@@ -1166,8 +1238,11 @@ def main():
         '--subtitle', type=str,
         help="Subtitle")
     cosmetic_group.add_argument(
+        '--extra_text', type=str,
+        help="Additional text")
+    cosmetic_group.add_argument(
         '--rgbtitle', type=rgb_tuple_from_csv, default=DEFAULT_RGB_TITLE,
-        help="RGB colours for title/subtitle")
+        help="RGB colours for title/subtitle/extra text")
     cosmetic_group.add_argument(
         '--rgbanalogue', type=rgb_tuple_from_csv, default=DEFAULT_RGB_ANALOGUE,
         help="RGB colours for analogue devices")
@@ -1184,7 +1259,12 @@ def main():
         '--ttf', default=DEFAULT_TRUETYPE_FILE,
         help="TrueType font file")
     cosmetic_group.add_argument(
-        '--wrap', action='store_true', help="Wrap text lines")
+        '--wrap', action='store_true',
+        help="Wrap text lines")
+    cosmetic_group.add_argument(
+        '--wrap_linesep', type=str, default=" ● ",
+        help="For wrapping, use this to separate multiple label lines"
+    )
 
     debug_group = parser.add_argument_group("Debug options")
     debug_group.add_argument(
@@ -1208,12 +1288,14 @@ def main():
 
         title=args.title,
         subtitle=args.subtitle,
+        extra_text=args.extra_text,
         rgbtitle=args.rgbtitle,
         rgbanalogue=args.rgbanalogue,
         rgbmomentary=args.rgbmomentary,
         rgbsticky=args.rgbsticky,
         ttf=args.ttf,
         wrap=args.wrap,
+        wrap_linesep=args.wrap_linesep,
 
         showmapping=args.showmapping,
         showrects=args.showrects,
@@ -1222,11 +1304,11 @@ def main():
     logging.basicConfig(level=logging.DEBUG if config.verbose
                         else logging.INFO)
 
-    logger.info("Thrustmaster Warthog binding diagram generator")
-    logger.info("By Rudolf Cardinal (rudolf@pobox.com), 2016-02-07")
-    logger.info("Templates courtesy of rayz007, "
-                "http://forums.eagle.ru/showthread.php?t=102016")
-    logger.debug("args: {}".format(args))
+    log.info("Thrustmaster Warthog binding diagram generator")
+    log.info("By Rudolf Cardinal (rudolf@pobox.com), 2016-02-07")
+    log.info("Templates courtesy of rayz007, "
+             "http://forums.eagle.ru/showthread.php?t=102016")
+    log.debug("args: {}".format(args))
 
     mapping = get_mapping(config)
     if args.showmapping:
@@ -1242,7 +1324,7 @@ def main():
         extralabels=(
             CROSSWIND_EXTRA_LABELS +
             TMW_STICK_EXTRA_LABELS +
-            make_title_labels(config)
+            make_extra_rhs_labels(config)
         )
     )
     make_picture(

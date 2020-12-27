@@ -1,0 +1,211 @@
+{
+    "mfg_crosswind_pedals": {
+        "Rudder": [
+            "Yaw",
+            "Cam. yaw"
+        ]
+    },
+    "thrustmaster_warthog_joystick": {
+        "S10_TMS_Left": [
+            "Prev. target"
+        ],
+        "S11_DMS_Up": [
+            "Pwr\u2192ENGINES"
+        ],
+        "S12_DMS_Right": [
+            "Pwr\u2192WEAPONS"
+        ],
+        "S13_DMS_Down": [
+            "Balance pwr distrib."
+        ],
+        "S14_DMS_Left": [
+            "Pwr\u2192SYSTEMS"
+        ],
+        "S15_CMS_Forward": [
+            "Next target subsyst.",
+            "UI up"
+        ],
+        "S16_CMS_Right": [
+            "Next firegroup",
+            "UI right"
+        ],
+        "S17_CMS_Backward": [
+            "Prev. target subsyst.",
+            "UI down"
+        ],
+        "S18_CMS_Left": [
+            "Prev. firegroup",
+            "UI left"
+        ],
+        "S19_CMS_Press": [
+            "Highest threat",
+            "UI select"
+        ],
+        "S1_Trigger_FirstStage": [
+            "ZAP!"
+        ],
+        "S2_WeaponsRelease": [
+            "Target ahead"
+        ],
+        "S3_NSB": [
+            "Chaff",
+            "UI back"
+        ],
+        "S4_PinkieLever": [
+            "Flight Assist",
+            "Cam. xlate Z hold"
+        ],
+        "S5_MMC": [
+            "POW!"
+        ],
+        "S7_TMS_Up": [
+            "Prev. hostile target"
+        ],
+        "S8_TMS_Right": [
+            "Next target"
+        ],
+        "S9_TMS_Down": [
+            "Next hostile target"
+        ],
+        "Stick_Backward": [
+            "Pitch",
+            "Cam. pitch"
+        ],
+        "Stick_Forward": [
+            "Pitch",
+            "Cam. pitch"
+        ],
+        "Stick_Left": [
+            "Roll"
+        ],
+        "Stick_Right": [
+            "Roll"
+        ],
+        "TrimHat_Down": [
+            "Thrust down",
+            "Cam. xlate down"
+        ],
+        "TrimHat_Left": [
+            "Thrust L",
+            "Cam. xlate L"
+        ],
+        "TrimHat_Right": [
+            "Thrust R",
+            "Cam. xlate R"
+        ],
+        "TrimHat_Up": [
+            "Thrust up",
+            "Cam. xlate up"
+        ]
+    },
+    "thrustmaster_warthog_throttle": {
+        "CoolieSwitchDown": [
+            "Target's target"
+        ],
+        "CoolieSwitchLeft": [
+            "Wingman 1"
+        ],
+        "CoolieSwitchRight": [
+            "Wingman 3"
+        ],
+        "CoolieSwitchUp": [
+            "Wingman 2"
+        ],
+        "RightThrottle": [
+            "Throttle"
+        ],
+        "S10_BoatSwitch_Backward": [
+            "Hyperspace"
+        ],
+        "S11_ChinaHat_Forward": [
+            "Radar +",
+            "Cam. zoom in"
+        ],
+        "S12_ChinaHat_Backward": [
+            "Radar -",
+            "Cam. zoom out"
+        ],
+        "S13_PinkieSwitch_Forward": [
+            "Hardpoints \u00b1"
+        ],
+        "S14_PinkieSwitch_Backward": [
+            "Orbit lines \u00b1"
+        ],
+        "S15_LeftThrottleButton": [
+            "Engine boost"
+        ],
+        "S16_LeftEngineFuelFlow": [
+            "Cargo scoop"
+        ],
+        "S17_RightEngineFuelFlow": [
+            "Silent running"
+        ],
+        "S1_SlewControl_Press": [
+            "Headlook \u00b1"
+        ],
+        "S20_APUStart": [
+            "Camera view \u00b1"
+        ],
+        "S21_LandingGearWarningSilence": [
+            "Pause"
+        ],
+        "S22_FlapsUp": [
+            "Lights \u00b1"
+        ],
+        "S23_FlapsDown": [
+            "Landing gear \u00b1"
+        ],
+        "S24_EAC": [
+            "Mic. mute"
+        ],
+        "S25_RadarAltimeter": [
+            "Rotat. correction"
+        ],
+        "S26_AutopilotEngageDisengage": [
+            "Frame Shift Drive \u00b1"
+        ],
+        "S27_AutopilotMode_Up": [
+            "Wingman nav lock"
+        ],
+        "S2_ThumbHat_Press": [
+            "UI focus"
+        ],
+        "S31_LeftEngineOperateUp": [
+            "Heatsink"
+        ],
+        "S32_RightEngineOperateUp": [
+            "Shield cell"
+        ],
+        "S3_ThumbHat_Up": [
+            "UI LEFT panel"
+        ],
+        "S4_ThumbHat_Forward": [
+            "UI next panel"
+        ],
+        "S5_ThumbHat_Down": [
+            "UI RIGHT panel"
+        ],
+        "S6_ThumbHat_Backward": [
+            "UI prev. panel"
+        ],
+        "S7_Speedbrake_Forward": [
+            "Reverse throttle"
+        ],
+        "S8_Speedbrake_Backward": [
+            "Thrust back"
+        ],
+        "S9_BoatSwitch_Forward": [
+            "Supercruise"
+        ],
+        "SlewControl_LeftRight": [
+            "Headlook L/R"
+        ],
+        "SlewControl_UpDown": [
+            "Headlook up/down"
+        ],
+        "ThrottleFrictionControl": [
+            "Thrust fwd/back",
+            "Cam. xlate fwd/back"
+        ]
+    }
+}

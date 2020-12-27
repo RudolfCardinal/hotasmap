@@ -1,0 +1,183 @@
+{
+    "mfg_crosswind_pedals": {
+        "Rudder": [
+            "Yaw R / Yaw L [F,H]"
+        ]
+    },
+    "thrustmaster_warthog_joystick": {
+        "S10_TMS_Left": [
+            "Targeting wheel [F]"
+        ],
+        "S11_DMS_Up": [
+            "○ Inc. weapon pwr [F]",
+            "●… Max. weapon pwr [F]"
+        ],
+        "S12_DMS_Right": [
+            "○ Inc. shield pwr [F]",
+            "●… Max. shield pwr [F]"
+        ],
+        "S13_DMS_Down": [
+            "Balance power [F]"
+        ],
+        "S14_DMS_Left": [
+            "○ Inc. engine pwr [F]",
+            "●… Max. engine pwr [F]"
+        ],
+        "S15_CMS_Forward": [
+            "Focus shields front (F)"
+        ],
+        "S16_CMS_Right": [
+            "Focus shields balanced (F)"
+        ],
+        "S17_CMS_Backward": [
+            "Focus shields rear (F)"
+        ],
+        "S18_CMS_Left": [
+            "Focus shields/convert power (F)"
+        ],
+        "S19_CMS_Press": [
+            "Deploy countermeasures (F)"
+        ],
+        "S1_Trigger_FirstStage": [
+            "Fire [F]"
+        ],
+        "S2_WeaponsRelease": [
+            "Target ahead [F]",
+            "[M] Cancel"
+        ],
+        "S3_NSB": [
+            "Contextual interaction [F]",
+            "[H] Interact",
+            "[M] Additional Function One"
+        ],
+        "S4_PinkieLever": [
+            "Drift [F]",
+            "[M] Additional Function Two"
+        ],
+        "S5_MMC": [
+            "[M] Confirm"
+        ],
+        "S7_TMS_Up": [
+            "Cycle targets [F]"
+        ],
+        "S8_TMS_Right": [
+            "○ Ping target [F]",
+            "○○ Ack. ping [F]",
+            "●… Comms wheel [F]",
+            "[H] ○ Emote wheel"
+        ],
+        "S9_TMS_Down": [
+            "Target my attacker [F]"
+        ],
+        "Stick_Backward": [
+            "Pitch up [F,H]"
+        ],
+        "Stick_Forward": [
+            "Pitch down [F,H]"
+        ],
+        "Stick_Left": [
+            "Roll left [F]"
+        ],
+        "Stick_Right": [
+            "Roll right [F]"
+        ],
+        "TrimHat_Down": [
+            "Targeting wheel ↓ [F]",
+            "Comms wheel ↓ [F]",
+            "[H] Emote wheel ↓"
+        ],
+        "TrimHat_Left": [
+            "Targeting wheel ← [F]",
+            "Comms wheel ← [F]",
+            "[H] Emote wheel ←"
+        ],
+        "TrimHat_Right": [
+            "Targeting wheel → [F]",
+            "Comms wheel → [F]",
+            "[H] Emote wheel →"
+        ],
+        "TrimHat_Up": [
+            "Targeting wheel ↑ [F]",
+            "Comms wheel ↑ [F]",
+            "[H] Emote wheel ↑"
+        ]
+    },
+    "thrustmaster_warthog_throttle": {
+        "CoolieSwitchDown": [
+            "[M] Next page"
+        ],
+        "CoolieSwitchLeft": [
+            "[M] Tab left"
+        ],
+        "CoolieSwitchRight": [
+            "[M] Tab right"
+        ],
+        "CoolieSwitchUp": [
+            "[M] Previous page"
+        ],
+        "LeftThrottle": [
+            "Throttle ± [F]"
+        ],
+        "RightThrottle": [
+            "Throttle ± [F]"
+        ],
+        "S10_BoatSwitch_Backward": [],
+        "S11_ChinaHat_Forward": [
+            "○ Fire L auxiliary [F]",
+            "○○ Dumb-fire L aux. [F]"
+        ],
+        "S12_ChinaHat_Backward": [
+            "○ Fire R auxiliary [F]",
+            "○○ Dumb-fire R aux. [F]"
+        ],
+        "S13_PinkieSwitch_Forward": [],
+        "S14_PinkieSwitch_Backward": [],
+        "S15_LeftThrottleButton": [
+            "○ Boost [F]",
+            "●… Drift [F]"
+        ],
+        "S16_LeftEngineFuelFlow": [],
+        "S17_RightEngineFuelFlow": [],
+        "S18_LeftEngineOperateDown": [],
+        "S19_RightEngineOperateDown": [],
+        "S1_SlewControl_Press": [
+            "Free look ○, ↔↕ [F]"
+        ],
+        "S20_APUStart": [],
+        "S21_LandingGearWarningSilence": [
+            "Show loadout [F]"
+        ],
+        "S22_FlapsUp": [],
+        "S23_FlapsDown": [],
+        "S24_EAC": [],
+        "S25_RadarAltimeter": [],
+        "S26_AutopilotEngageDisengage": [],
+        "S27_AutopilotMode_Up": [],
+        "S28_AutopilotMode_Down": [],
+        "S29_RightEngineIdle": [],
+        "S2_ThumbHat_Press": [
+            "[M] Menu"
+        ],
+        "S30_LeftEngineIdle": [],
+        "S31_LeftEngineOperateUp": [],
+        "S32_RightEngineOperateUp": [],
+        "S3_ThumbHat_Up": [
+            "[M] Navigate up"
+        ],
+        "S4_ThumbHat_Forward": [
+            "[M] Navigate right"
+        ],
+        "S5_ThumbHat_Down": [
+            "[M] Navigate down"
+        ],
+        "S6_ThumbHat_Backward": [
+            "[M] Navigate left"
+        ],
+        "S7_Speedbrake_Forward": [],
+        "S8_Speedbrake_Backward": [],
+        "S9_BoatSwitch_Forward": [],
+        "SlewControl_LeftRight": [],
+        "SlewControl_UpDown": [],
+        "ThrottleFrictionControl": []
+    }
+}
