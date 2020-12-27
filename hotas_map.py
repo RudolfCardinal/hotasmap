@@ -22,6 +22,15 @@ VERSION HISTORY
 
   - PyCharm code cleanup.
 
+* 2018-01-21
+
+  - Better documentation.
+
+* 2020-12-27
+
+  - Type hinting.
+  - Label axes more clearly (per Windows drivers).
+
 """
 
 # =============================================================================
@@ -33,6 +42,7 @@ import json
 import logging
 import re
 from xml.etree import ElementTree
+from typing import Any, Dict, List, Tuple
 
 from PIL import (  # install with "pip install pillow" but import as PIL
     Image,
@@ -42,6 +52,7 @@ from PIL import (  # install with "pip install pillow" but import as PIL
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
 
 # =============================================================================
 # Defaults
@@ -61,6 +72,7 @@ DEFAULT_RGB_STICKY = "0,0,255"
 DEFAULT_ED_STICK = "ThrustMasterWarthogJoystick"
 DEFAULT_ED_THROTTLE = "ThrustMasterWarthogThrottle"
 DEFAULT_ED_MFG_CROSSWIND_NAME = "16D00A38"  # always this value or not?
+
 
 # =============================================================================
 # Other constants
@@ -88,8 +100,10 @@ ANALOGUE = '~'
 MOMENTARY = '.'
 STICKY = '+'
 
+
 # =============================================================================
-# Devices, with mappings to picture coordinates, Elite Dangerous names, etc.
+# Devices, with mappings to picture coordinates, Elite Dangerous switch names,
+# etc.
 # =============================================================================
 
 TMW_STICK_MAP = {
@@ -171,6 +185,16 @@ TMW_STICK_MAP = {
     'S19_CMS_Press': dict(
         l=327, t=1263, w=J_WIDTH, h=J_HEIGHT, ed='Joy_19', type=MOMENTARY),
 }
+
+TMW_STICK_EXTRA_LABELS = [
+    dict(text='X axis',
+         x=475, y=1525 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
+         hjust=1, vjust=0.5),
+    dict(text='Y axis',
+         x=350, y=1415 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
+         hjust=1, vjust=0.5),
+]
+
 MFG_CROSSWIND_MAP = {
     # These are specials from the MFG Crosswind:
     'Rudder': dict(
@@ -183,17 +207,19 @@ MFG_CROSSWIND_MAP = {
         l=325, t=2000, w=J_WIDTH, h=J_HEIGHT, hjust=0,
         ed='Joy_YAxis', type=ANALOGUE),
 }
+
 CROSSWIND_EXTRA_LABELS = [
-    dict(text='Pedals: Rudder',
+    dict(text='Pedals: Rudder\n(Z rotation)',
          x=300, y=1850 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
          hjust=1, vjust=0.5),
-    dict(text='Pedals: Left footbrake',
+    dict(text='Pedals: Left footbrake\n(X axis)',
          x=300, y=1925 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
          hjust=1, vjust=0.5),
-    dict(text='Pedals: Right footbrake',
+    dict(text='Pedals: Right footbrake\n(Y axis)',
          x=300, y=2000 + J_HEIGHT / 2, fontsize=20, rgb=(0, 0, 0),
          hjust=1, vjust=0.5),
 ]
+
 TMW_THROTTLE_MAP = {
     # overall image size is 1625 x 2201
 
@@ -306,6 +332,16 @@ TMW_THROTTLE_MAP = {
         l=1341, t=471, w=T_WIDTH, h=T_HEIGHT, ed='Joy_32', type=MOMENTARY),
 }
 
+TMW_THROTTLE_EXTRA_LABELS = [
+    dict(text='(Z axis)',  # right throttle (shown on the left)
+         x=565, y=2115, fontsize=20, rgb=(0, 0, 0),
+         hjust=1, vjust=0.5),
+    dict(text='(Z rotation)',  # left throttle (shown on the right)
+         x=1320, y=2115, fontsize=20, rgb=(0, 0, 0),
+         hjust=0, vjust=0.5),
+]
+
+
 # =============================================================================
 # Map E:D labels to human
 # =============================================================================
@@ -391,7 +427,7 @@ ED_LABEL_MAP = {
     'PrimaryFire': 'Fire 1',
     'QuickCommsPanel': 'Quick comms',
     'RadarDecreaseRange': 'Radar +',
-    'RadarIncreaseRange': 'Radar -',
+    'RadarIncreaseRange': 'Radar –',
     'RadarRangeAxis': 'Radar range',
     'ResetPowerDistribution': 'Balance pwr distrib.',
     'RightThrustButton_Landing': 'Ldg/Thrust R',
@@ -498,7 +534,9 @@ ED_HORIZONS = [  # Labels to ignore for now
 # =============================================================================
 
 def merge_dicts(*args):
-    """Creates a new dictionary that merges those passed as arguments."""
+    """
+    Creates a new dictionary that merges those passed as arguments.
+    """
     if not args:
         return {}
     d = args[0].copy()
@@ -507,9 +545,11 @@ def merge_dicts(*args):
     return d
 
 
-def rgb_tuple_from_csv(text):
-    """Returns a three-valued tuple, each in the range 0-255, from comma-
-    separated text."""
+def rgb_tuple_from_csv(text: str):
+    """
+    Returns a three-valued tuple, each in the range 0-255, from comma-
+    separated text.
+    """
     values = text.split(",")
     if len(values) != 3:
         raise ValueError("Not a tuple of length 3")
@@ -529,11 +569,7 @@ FONT_CACHE = {}
 CHAR_WIDTH_CACHE = {}
 
 
-def word_wrap(text, width, font):
-    # Based on
-    #   http://code.activestate.com/recipes/577946-word-wrap-for-proportional-fonts/  # noqa
-    # ... but updated for Python 3, and using a program-wide (rather than
-    #     a function-local) font/character-size cache, which speeds it up a lot
+def word_wrap(text: str, width: int, font: ImageFont) -> List[str]:
     """
     Word wrap function / algorithm for wrapping text using proportional (versus
     fixed-width) fonts.
@@ -545,7 +581,13 @@ def word_wrap(text, width, font):
                    the algorithm only uses the width.
 
     Returns a list of strings, one for each line after wrapping.
-    """
+
+    Based on
+    http://code.activestate.com/recipes/577946-word-wrap-for-proportional-fonts/
+    ... but updated for Python 3, and using a program-wide (rather than
+    a function-local) font/character-size cache, which speeds it up a lot.
+
+    """  # noqa
     lines = []
     pattern = RE_WHITESPACE
     lookup = dict((c, get_char_width(c, font)) for c in set(text))
@@ -569,7 +611,11 @@ def word_wrap(text, width, font):
     return lines or ['']
 
 
-def word_wrap_2(text, width, font):
+def word_wrap_2(text: str, width: int, font: ImageFont) -> str:
+    """
+    As for :func:`word_wrap` but returns a single wrapped string.
+
+    """
     text = " ".join(text.split("\n"))
     lines = word_wrap(text, width, font)
     wrapped = "\n".join(lines)
@@ -577,8 +623,9 @@ def word_wrap_2(text, width, font):
     return wrapped
 
 
-def get_font(ttf, fontsize):
+def get_font(ttf: str, fontsize: float) -> ImageFont:
     """
+    Loads a font.
     Makes the error message clearer if we fail.
     Also caches the fonts.
     """
@@ -586,16 +633,16 @@ def get_font(ttf, fontsize):
         return FONT_CACHE[(ttf, fontsize)]
     try:
         font = ImageFont.truetype(ttf, fontsize)
-    except:
+    except Exception:
         logger.error("Failed to load font!")
         raise
     FONT_CACHE[(ttf, fontsize)] = font
     return font
 
 
-def get_char_width(c, font):
+def get_char_width(c: str, font: ImageFont) -> int:
     """
-    Caches character widths
+    Caches character widths for a font.
     """
     if (c, font) in CHAR_WIDTH_CACHE:
         return CHAR_WIDTH_CACHE[(c, font)]
@@ -604,10 +651,10 @@ def get_char_width(c, font):
     return width
 
 
-def get_align_from_hjust(hjust):
+def get_align_from_hjust(hjust: float) -> str:
     """
-        0 -> 'left', 0.5 -> 'center', 1 -> 'right'
-        ... and in-between things similarly
+    Maps 0 -> 'left', 0.5 -> 'center', 1 -> 'right'
+    ... and in-between things get nudged to the nearest of those three.
     """
     if hjust <= 0.25:
         return 'left'
@@ -616,8 +663,13 @@ def get_align_from_hjust(hjust):
     return 'center'
 
 
-def composite_side_by_side(joinedfilename, filenames):
-    """Composite two or more images side-by-side."""
+def composite_side_by_side(
+        joinedfilename: str,
+        filenames: List[str]) -> None:
+    """
+    Creates a composite image (on disk) of two or more images (specified by
+    their filenames) side-by-side.
+    """
     logger.info("Compositing {} -> {}".format(filenames, joinedfilename))
     images = [Image.open(f) for f in filenames]
     width = sum(i.size[0] for i in images)
@@ -632,31 +684,58 @@ def composite_side_by_side(joinedfilename, filenames):
     joined.save(joinedfilename)
 
 
-def justify_to_point(point, itemsize, just=0.0):
+def justify_to_point(
+        point: float,
+        itemsize: float,
+        just: float = 0.0) -> float:
     """
-    just:
-        0 = left/top
-        0.5 = centre
-        1 = right/bottom
-    returns: starting coordinate (top or left)
+    Args:
+        point:
+            align to this coordinate
+        itemsize:
+            size of the item we are aligning
+        just:
+            How should we align?
+            - 0 = left/top
+            - 0.5 = centre
+            - 1 = right/bottom
+
+    Returns:
+        float: starting coordinate of the item (top or left)
+
     Note:
-        x axis is left-to-right (and justification 0-1 is left-to-right)
-        y axis is top-to-bottom (and justification 0-1 is top-to-bottom)
-        ... so we can treat them equivalently.
+
+    - x axis is left-to-right (and justification 0-1 is left-to-right)
+    - y axis is top-to-bottom (and justification 0-1 is top-to-bottom)
+    - ... so we can treat them equivalently.
     """
     return point - itemsize * just
 
 
-def justify_to_box(boxstart, boxsize, itemsize, just=0.0):
+def justify_to_box(
+        boxstart: float,
+        boxsize: float,
+        itemsize: float,
+        just: float = 0.0) -> float:
     """
     Justifies, similarly, but within a box.
     """
     return boxstart + (boxsize - itemsize) * just
 
 
-def add_label(img, text, x, y, ttf, fontsize, rgb,
-              hjust=0, vjust=0):
-    """Adds a label to an image."""
+def add_label(
+        img: Image,
+        text: str,
+        x: int,
+        y: int,
+        ttf: str,
+        fontsize: float,
+        rgb: Tuple[int, int, int],
+        hjust: float = 0,
+        vjust: float = 0) -> None:
+    """
+    Adds a label to an image.
+    """
     draw = ImageDraw.Draw(img)
     font = get_font(ttf, fontsize)
     w, h = draw.textsize(text, font)
@@ -666,10 +745,20 @@ def add_label(img, text, x, y, ttf, fontsize, rgb,
                         align=get_align_from_hjust(hjust))
 
 
-def add_boxed_text(img, text, boxcoords, ttf, rgb,
-                   showrect=False, hjust=0.5, vjust=0.5, wrap=False,
-                   font_trial_step_size=5):
-    """Adds text to an image, within a notional rectangle."""
+def add_boxed_text(
+        img: Image,
+        text: str,
+        boxcoords: Tuple[int, int, int, int],
+        ttf: str,
+        rgb: Tuple[int, int, int],
+        showrect: bool = False,
+        hjust: float = 0.5,
+        vjust: float = 0.5,
+        wrap: bool = False,
+        font_trial_step_size: int = 5) -> None:
+    """
+    Adds text to an image, within a notional rectangle.
+    """
     logger.debug("add_boxed_text: text={}, boxcoords={}".format(
         repr(text), repr(boxcoords)))
     draw = ImageDraw.Draw(img)
@@ -741,7 +830,11 @@ def add_boxed_text(img, text, boxcoords, ttf, rgb,
 # Core processing functions
 # =============================================================================
 
-def get_mapping(cmdargs):
+def get_mapping(cmdargs: argparse.Namespace) -> Dict[str, Dict[str, Any]]:
+    """
+    Returns a dictionary with sub-dictionaries for the stick, throttle, and
+    pedals.
+    """
     if cmdargs.format == 'json':
         logger.info("Using JSON input file {}".format(cmdargs.input))
         json_data = open(cmdargs.input).read()
@@ -789,7 +882,14 @@ def get_mapping(cmdargs):
         assert False, "Bad input format: {}".format(cmdargs.format)
 
 
-def process_ed_xml_node(parenttag, node, masterdict, cmdargs):
+def process_ed_xml_node(
+        parenttag: ElementTree.Element,
+        node: ElementTree.Element,
+        masterdict: Dict[str, Dict[str, Any]],
+        cmdargs: argparse.Namespace) -> None:
+    """
+    Modifies ``masterdict`` for Elite:Dangerous mappings.
+    """
     device = node.attrib['Device']
     key = node.attrib['Key']
     logger.debug("Processing node: {}, device={}, key={}".format(
@@ -814,13 +914,27 @@ def process_ed_xml_node(parenttag, node, masterdict, cmdargs):
             refdict[ourkey].append(nicelabel)
 
 
-def make_picture(descmap, placemap, template, outfile, cmdargs,
-                 extralabels=None):
+def make_picture(
+        descmap: Dict[str, str],
+        placemap: Dict[str, Dict[str, int]],
+        template: str,
+        outfile: str,
+        cmdargs: argparse.Namespace,
+        extralabels: List[Dict[str, Any]] = None) -> None:
     """
-    descmap: dict mapping keyname -> description
-    placemap: dict mapping keyname -> dict(l=left, r=right, t=top, b=bottom)
-    template: template file
-    outfile: output file
+    Args:
+        descmap:
+            dict mapping keyname -> description
+        placemap:
+            dict mapping keyname -> dict(l=left, r=right, t=top, b=bottom)
+        template:
+            template filename
+        outfile:
+            output filename
+        cmdargs:
+            top-level command arguments
+        extralabels:
+            list of extra label dictionaries
     """
     extralabels = extralabels or []
     logger.info("Opening template: {}".format(template))
@@ -865,10 +979,21 @@ def make_picture(descmap, placemap, template, outfile, cmdargs,
 
 def main():
     # Fetch command-line options.
+    # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(
-        description="Generate Thrustmaster Warthog binding pictures. "
-                    "For a simple example, run with the arguments "
-                    "'--format demo' only."
+        description=r"""
+(1) Generate Thrustmaster Warthog (joystick, throttle) binding pictures. Also 
+adds MFG Crosswind rudder pedal labels.
+(3) As input, it can take a JSON mapping or an Elite:Dangerous bind file.
+For Elite, the best thing to do is to create the bindings within Elite itself,
+then point this script at the custom binding file.
+(2) For a simple example with no definitions, run with the arguments "--format 
+demo [--showmapping]"; this creates pictures labelled with the switch names. 
+(4) To find your custom binding file, use "dir custom*bind*.* /s /p". Usually
+it is in "%USERPROFILE%\AppData\local\Frontier Developments\Elite 
+Dangerous\Options\Bindings".
+        """,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
         '--format', default="json", choices=['json', 'ed', 'demo'],
@@ -882,54 +1007,44 @@ def main():
         help="Input file (unless 'demo' mode is used)")
     parser.add_argument(
         '--joyout', default=DEFAULT_JOYSTICK_OUTPUT,
-        help="Joystick output file (default: {})".format(
-            DEFAULT_JOYSTICK_OUTPUT))
+        help="Joystick output file")
     parser.add_argument(
         '--throtout', default=DEFAULT_THROTTLE_OUTPUT,
-        help="Throttle output file (default: {})".format(
-            DEFAULT_THROTTLE_OUTPUT))
+        help="Throttle output file")
     parser.add_argument(
         '--compout', default=DEFAULT_COMPOSITE_OUTPUT,
-        help="Composite output file (default: {})".format(
-            DEFAULT_COMPOSITE_OUTPUT))
+        help="Composite output file")
     parser.add_argument(
         '--joytemplate', default=DEFAULT_JOYSTICK_TEMPLATE,
-        help="Joystick template (default: {})".format(
-            DEFAULT_JOYSTICK_TEMPLATE))
+        help="Joystick template")
     parser.add_argument(
         '--throttemplate', default=DEFAULT_THROTTLE_TEMPLATE,
-        help="Throttle template (default: {})".format(
-            DEFAULT_THROTTLE_TEMPLATE))
+        help="Throttle template")
     parser.add_argument(
         '--ed_tmw_stick', default=DEFAULT_ED_STICK,
-        help="Elite Dangerous device name for Thrustmaster Warthog joystick "
-             "(default: {})".format(DEFAULT_ED_STICK))
+        help="Elite Dangerous device name for Thrustmaster Warthog joystick")
     parser.add_argument(
         '--ed_tmw_throttle', default=DEFAULT_ED_THROTTLE,
         help="Elite Dangerous device name for Thrustmaster Warthog throttle/"
-             "control panel (default: {})".format(DEFAULT_ED_THROTTLE))
+             "control panel")
     parser.add_argument(
         '--ed_mfg_crosswind', default=DEFAULT_ED_MFG_CROSSWIND_NAME,
-        help="Elite Dangerous device name for MFG Crosswind rudder pedals "
-             "(default: {})".format(DEFAULT_ED_MFG_CROSSWIND_NAME))
+        help="Elite Dangerous device name for MFG Crosswind rudder pedals")
     parser.add_argument(
         '--ed_horizons', action='store_true',
         help="Include bindings for Elite Dangerous: Horizons (lander buggy)")
     parser.add_argument(
         '--rgbanalogue', type=rgb_tuple_from_csv, default=DEFAULT_RGB_ANALOGUE,
-        help="RGB colours for analogue devices (default: {})".format(
-            DEFAULT_RGB_ANALOGUE))
+        help="RGB colours for analogue devices")
     parser.add_argument(
         '--rgbmomentary', type=rgb_tuple_from_csv,
         default=DEFAULT_RGB_MOMENTARY,
         help="RGB colours for momentary switches (switches that deactivate "
-             "when released; default: {})".format(DEFAULT_RGB_MOMENTARY))
+             "when released)")
     parser.add_argument(
         '--rgbsticky', type=rgb_tuple_from_csv, default=DEFAULT_RGB_STICKY,
-        help=(
-            "RGB colours for sticky switches (switches that keep their "
-            "position when released; default: {})".format(
-                DEFAULT_RGB_STICKY)))
+        help="RGB colours for sticky switches (switches that keep their "
+             "position when released)")
     parser.add_argument(
         '--showmapping', action='store_true',
         help="Print mapping to stdout")
@@ -938,7 +1053,7 @@ def main():
         help="Debugging option: show text rectangles")
     parser.add_argument(
         '--ttf', default=DEFAULT_TRUETYPE_FILE,
-        help="TrueType font file (default: {})".format(DEFAULT_TRUETYPE_FILE))
+        help="TrueType font file")
     parser.add_argument('--verbose', action='count', default=0, help="Verbose")
     parser.add_argument(
         '--wrap', action='count', default=0, help="Wrap text lines")
@@ -961,15 +1076,23 @@ def main():
     if args.showmapping:
         print(json.dumps(mapping, sort_keys=True,
                          indent=4, separators=(',', ': ')))
-    make_picture(merge_dicts(mapping[TMW_STICK_NAME],
-                             mapping[MFG_CROSSWIND_NAME]),
-                 merge_dicts(TMW_STICK_MAP, MFG_CROSSWIND_MAP),
-                 args.joytemplate, args.joyout,
-                 args,
-                 extralabels=CROSSWIND_EXTRA_LABELS)
-    make_picture(mapping[TMW_THROTTLE_NAME], TMW_THROTTLE_MAP,
-                 args.throttemplate, args.throtout,
-                 args)
+    make_picture(
+        descmap=merge_dicts(mapping[TMW_STICK_NAME],
+                            mapping[MFG_CROSSWIND_NAME]),
+        placemap=merge_dicts(TMW_STICK_MAP, MFG_CROSSWIND_MAP),
+        template=args.joytemplate,
+        outfile=args.joyout,
+        cmdargs=args,
+        extralabels=CROSSWIND_EXTRA_LABELS + TMW_STICK_EXTRA_LABELS
+    )
+    make_picture(
+        descmap=mapping[TMW_THROTTLE_NAME],
+        placemap=TMW_THROTTLE_MAP,
+        template=args.throttemplate,
+        outfile=args.throtout,
+        cmdargs=args,
+        extralabels=TMW_THROTTLE_EXTRA_LABELS
+    )
     composite_side_by_side(args.compout,
                            [args.throtout, args.joyout])
 
