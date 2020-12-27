@@ -30,6 +30,12 @@ VERSION HISTORY
 
   - Type hinting.
   - Label axes more clearly (per Windows drivers).
+  - Python 3.7 requirement, for dataclass.
+  - Title/subtitle.
+  - Option to print blank template.
+  - Script files for convenience.
+  - Added demo Elite and JSON files.
+  - Star Wars: Squadrons specimen (as JSON).
 
 """
 
@@ -38,12 +44,18 @@ VERSION HISTORY
 # =============================================================================
 
 import argparse
+from dataclasses import dataclass
+from enum import Enum
 import json
 import logging
+import os
 import re
 from xml.etree import ElementTree
-from typing import Any, Dict, List, Tuple
+import sys
+from typing import Any, Dict, List, Optional, Tuple
 
+from cardinal_pythonlib.argparse_func import RawDescriptionArgumentDefaultsHelpFormatter  # noqa
+from cardinal_pythonlib.enumlike import keys_descriptions_from_enum
 from PIL import (  # install with "pip install pillow" but import as PIL
     Image,
     ImageDraw,
@@ -55,19 +67,31 @@ logger.addHandler(logging.NullHandler())
 
 
 # =============================================================================
+# Paths
+# =============================================================================
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(THIS_DIR, "output")
+TEMPLATE_DIR = os.path.join(THIS_DIR, "templates")
+
+
+# =============================================================================
 # Defaults
 # =============================================================================
 
-DEFAULT_JOYSTICK_TEMPLATE = "templates/TEMPLATE_tmw_joystick.png"
-DEFAULT_THROTTLE_TEMPLATE = "templates/TEMPLATE_tmw_throttle.png"
-DEFAULT_JOYSTICK_OUTPUT = "output/output_joystick.png"
-DEFAULT_THROTTLE_OUTPUT = "output/output_throttle.png"
-DEFAULT_COMPOSITE_OUTPUT = "output/output_composite.png"
+DEFAULT_JOYSTICK_TEMPLATE = os.path.join(
+    TEMPLATE_DIR, "TEMPLATE_tmw_joystick.png")
+DEFAULT_THROTTLE_TEMPLATE = os.path.join(
+    TEMPLATE_DIR, "TEMPLATE_tmw_throttle.png")
+DEFAULT_JOYSTICK_OUTPUT = os.path.join(OUTPUT_DIR, "output_joystick.png")
+DEFAULT_THROTTLE_OUTPUT = os.path.join(OUTPUT_DIR, "output_throttle.png")
+DEFAULT_COMPOSITE_OUTPUT = os.path.join(OUTPUT_DIR, "output_composite.png")
 
 DEFAULT_TRUETYPE_FILE = "Arial_Bold.ttf"
-DEFAULT_RGB_ANALOGUE = "255,0,255"
-DEFAULT_RGB_MOMENTARY = "255,0,0"
-DEFAULT_RGB_STICKY = "0,0,255"
+DEFAULT_RGB_TITLE = "0,100,0"  # dark green
+DEFAULT_RGB_ANALOGUE = "255,0,255"  # magenta
+DEFAULT_RGB_MOMENTARY = "255,0,0"  # red
+DEFAULT_RGB_STICKY = "0,0,255"  # blue
 
 DEFAULT_ED_STICK = "ThrustMasterWarthogJoystick"
 DEFAULT_ED_THROTTLE = "ThrustMasterWarthogThrottle"
@@ -827,19 +851,107 @@ def add_boxed_text(
 
 
 # =============================================================================
+# Config classes
+# =============================================================================
+
+class InputFormat(Enum):
+    """
+    Input format mode.
+    """
+    blank = "Create a blank mapping (for pen-and-paper editing)"
+    demo = "Demonstrate by printing switch names"
+    ed = "Elite:Dangerous binding file (.binds)"
+    json = "JSON (.json; same format produced by --showmapping)"
+
+
+@dataclass
+class Config:
+    # Input files
+    format: InputFormat
+    input: str
+
+    # Elite:Dangerous options
+    ed_tmw_stick: str
+    ed_tmw_throttle: str
+    ed_mfg_crosswind: str
+    ed_horizons: bool
+
+    # Cosmetic options
+    title: Optional[str]
+    subtitle: Optional[str]
+    rgbtitle: Tuple[int, int, int]
+    rgbanalogue: Tuple[int, int, int]
+    rgbmomentary: Tuple[int, int, int]
+    rgbsticky: Tuple[int, int, int]
+    ttf: str
+    wrap: bool
+
+    # Debug options
+    showmapping: bool
+    showrects: bool
+    verbose: bool
+
+    def __post_init__(self) -> None:
+        allowed_no_input = [InputFormat.blank, InputFormat.demo]
+        assert self.input is not None or self.format in allowed_no_input, (
+            f"Must specify input unless using modes "
+            f"{[x.name for x in allowed_no_input]}; "
+            f"use --help for help"
+        )
+
+
+# =============================================================================
 # Core processing functions
 # =============================================================================
 
-def get_mapping(cmdargs: argparse.Namespace) -> Dict[str, Dict[str, Any]]:
+def make_title_labels(config: Config) -> List[Dict[str, Any]]:
+    """
+    Returns extra labels, in our standard dictionary format, for titles.
+    """
+    labels = []  # type: List[Dict[str, Any]]
+    x_left = 50
+    y_start = 50
+    if config.title:
+        labels.append(dict(
+            text=config.title,
+            x=x_left,
+            y=y_start,
+            fontsize=40,
+            rgb=config.rgbtitle,
+            hjust=0,
+            vjust=0
+        ))
+    if config.subtitle:
+        labels.append(dict(
+            text=config.subtitle,
+            x=x_left,
+            y=y_start + 50,
+            fontsize=30,
+            rgb=config.rgbtitle,
+            hjust=0,
+            vjust=0
+        ))
+    return labels
+
+
+def get_mapping(config: Config) -> Dict[str, Dict[str, Any]]:
     """
     Returns a dictionary with sub-dictionaries for the stick, throttle, and
     pedals.
     """
-    if cmdargs.format == 'json':
-        logger.info("Using JSON input file {}".format(cmdargs.input))
-        json_data = open(cmdargs.input).read()
+    masterdict = {
+        TMW_STICK_NAME: {},
+        TMW_THROTTLE_NAME: {},
+        MFG_CROSSWIND_NAME: {},
+    }
+    if config.format == InputFormat.json:
+        logger.info("Using JSON input file {}".format(config.input))
+        json_data = open(config.input).read()
         return json.loads(json_data)
-    elif cmdargs.format == 'demo':
+    elif config.format == InputFormat.blank:
+        logger.info("Using blank mapping")
+        return masterdict
+    elif config.format == InputFormat.demo:
         logger.info("Using demo mapping")
         return {
             TMW_STICK_NAME: dict([(k, [k]) for k in TMW_STICK_MAP.keys()]),
@@ -848,15 +960,10 @@ def get_mapping(cmdargs: argparse.Namespace) -> Dict[str, Dict[str, Any]]:
             MFG_CROSSWIND_NAME: dict([(k, [k])
                                       for k in MFG_CROSSWIND_MAP.keys()]),
         }
-    elif cmdargs.format == 'ed':
+    elif config.format == InputFormat.ed:
         logger.info("Using Elite Dangerous binding file {}".format(
-            cmdargs.input))
-        masterdict = {
-            TMW_STICK_NAME: {},
-            TMW_THROTTLE_NAME: {},
-            MFG_CROSSWIND_NAME: {},
-        }
-        tree = ElementTree.parse(cmdargs.input)
+            config.input))
+        tree = ElementTree.parse(config.input)
         root = tree.getroot()
         # Nodes look like this:
         #   <FUNCTIONNAME>
@@ -874,19 +981,19 @@ def get_mapping(cmdargs: argparse.Namespace) -> Dict[str, Dict[str, Any]]:
         for node in nodes:
             for childbit in ['Primary', 'Secondary', 'Binding']:
                 child = node.find("./" + childbit)
-                if child is not None and (cmdargs.ed_horizons or
+                if child is not None and (config.ed_horizons or
                                           node.tag not in ED_HORIZONS):
-                    process_ed_xml_node(node.tag, child, masterdict, cmdargs)
+                    process_ed_xml_node(node.tag, child, masterdict, config)
         return masterdict
     else:
-        assert False, "Bad input format: {}".format(cmdargs.format)
+        assert False, "Bad input format: {}".format(config.format)
 
 
 def process_ed_xml_node(
         parenttag: ElementTree.Element,
         node: ElementTree.Element,
         masterdict: Dict[str, Dict[str, Any]],
-        cmdargs: argparse.Namespace) -> None:
+        config: Config) -> None:
     """
     Modifies ``masterdict`` for Elite:Dangerous mappings.
     """
@@ -894,13 +1001,13 @@ def process_ed_xml_node(
     key = node.attrib['Key']
     logger.debug("Processing node: {}, device={}, key={}".format(
         parenttag, device, key))
-    if device == cmdargs.ed_tmw_stick:
+    if device == config.ed_tmw_stick:
         refmap = TMW_STICK_MAP
         refdict = masterdict[TMW_STICK_NAME]
-    elif device == cmdargs.ed_tmw_throttle:
+    elif device == config.ed_tmw_throttle:
         refmap = TMW_THROTTLE_MAP
         refdict = masterdict[TMW_THROTTLE_NAME]
-    elif device == cmdargs.ed_mfg_crosswind:
+    elif device == config.ed_mfg_crosswind:
         refmap = MFG_CROSSWIND_MAP
         refdict = masterdict[MFG_CROSSWIND_NAME]
     else:
@@ -919,7 +1026,7 @@ def make_picture(
         placemap: Dict[str, Dict[str, int]],
         template: str,
         outfile: str,
-        cmdargs: argparse.Namespace,
+        config: Config,
         extralabels: List[Dict[str, Any]] = None) -> None:
     """
     Args:
@@ -931,7 +1038,7 @@ def make_picture(
             template filename
         outfile:
             output filename
-        cmdargs:
+        config:
             top-level command arguments
         extralabels:
             list of extra label dictionaries
@@ -950,23 +1057,23 @@ def make_picture(
             boxheight = info['h']
             type_ = info.get('type')
             if type_ == ANALOGUE:
-                rgb = cmdargs.rgbanalogue
+                rgb = config.rgbanalogue
             elif type_ == STICKY:
-                rgb = cmdargs.rgbsticky
+                rgb = config.rgbsticky
             else:
-                rgb = cmdargs.rgbmomentary
+                rgb = config.rgbmomentary
             boxcoords = (boxleft, boxtop, boxwidth, boxheight)
-            if cmdargs.wrap:
+            if config.wrap:
                 desc = " ● ".join(desclist)
             else:
                 desc = "\n".join(desclist)
-            add_boxed_text(img, desc, boxcoords, cmdargs.ttf, rgb,
-                           showrect=cmdargs.showrects,
+            add_boxed_text(img, desc, boxcoords, config.ttf, rgb,
+                           showrect=config.showrects,
                            hjust=info.get('hjust', 0.5),
                            vjust=info.get('vjust', 0.5),
-                           wrap=cmdargs.wrap)
+                           wrap=config.wrap)
     for el in extralabels:
-        add_label(img, el['text'], el['x'], el['y'], cmdargs.ttf,
+        add_label(img, el['text'], el['x'], el['y'], config.ttf,
                   el['fontsize'], el['rgb'],
                   hjust=el.get('hjust', 0), vjust=el.get('vjust', 0))
     logger.info("Saving to: {}".format(outfile))
@@ -983,87 +1090,136 @@ def main():
     parser = argparse.ArgumentParser(
         description=r"""
 (1) Generate Thrustmaster Warthog (joystick, throttle) binding pictures. Also 
-adds MFG Crosswind rudder pedal labels.
-(3) As input, it can take a JSON mapping or an Elite:Dangerous bind file.
-For Elite, the best thing to do is to create the bindings within Elite itself,
-then point this script at the custom binding file.
-(2) For a simple example with no definitions, run with the arguments "--format 
-demo [--showmapping]"; this creates pictures labelled with the switch names. 
-(4) To find your custom binding file, use "dir custom*bind*.* /s /p". Usually
-it is in "%USERPROFILE%\AppData\local\Frontier Developments\Elite 
-Dangerous\Options\Bindings".
-        """,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    adds MFG Crosswind rudder pedal labels.
+
+(2) For a simple example with no definitions, run
+        {progname} --format demo [--showmapping]
+    ... this creates pictures labelled with the switch names. 
+
+(3) As input, it can take a JSON mapping:
+        {progname} --format json --input MYFILE.json
+ 
+    or an Elite:Dangerous bind file:
+        {progname} --format ed --INPUT Custom.2.0.binds
+    
+    For Elite, the best thing to do is to create the bindings within Elite
+    itself, then aim this script at the custom binding file.
+
+(4) To find your Elite:Dangerous custom binding file, use: 
+        dir custom*bind*.* /s /p
+    Usually it is in
+        %USERPROFILE%\AppData\local\Frontier Developments\Elite Dangerous\Options\Bindings
+
+        """.format(progname=sys.argv[0]).strip(),
+        formatter_class=RawDescriptionArgumentDefaultsHelpFormatter
     )
-    parser.add_argument(
-        '--format', default="json", choices=['json', 'ed', 'demo'],
-        required=True,
-        help="Input format. Possible values: "
-             "'json' (same format as produced by --showmapping); "
-             "'ed' (Elite Dangerous .binds file); "
-             "'demo' (simple demonstration)")
-    parser.add_argument(
+
+    input_group = parser.add_argument_group("Input options")
+    format_k, format_desc = keys_descriptions_from_enum(InputFormat)
+    input_group.add_argument(
+        '--format', type=str, choices=format_k,
+        default=InputFormat.json.name,
+        help=f"Input format. Possible options: {format_desc}")
+    input_group.add_argument(
         '--input', default=None,
         help="Input file (unless 'demo' mode is used)")
-    parser.add_argument(
+
+    output_group = parser.add_argument_group("Output files")
+    output_group.add_argument(
         '--joyout', default=DEFAULT_JOYSTICK_OUTPUT,
         help="Joystick output file")
-    parser.add_argument(
+    output_group.add_argument(
         '--throtout', default=DEFAULT_THROTTLE_OUTPUT,
         help="Throttle output file")
-    parser.add_argument(
+    output_group.add_argument(
         '--compout', default=DEFAULT_COMPOSITE_OUTPUT,
         help="Composite output file")
-    parser.add_argument(
+
+    template_group = parser.add_argument_group("Template image files")
+    template_group.add_argument(
         '--joytemplate', default=DEFAULT_JOYSTICK_TEMPLATE,
         help="Joystick template")
-    parser.add_argument(
+    template_group.add_argument(
         '--throttemplate', default=DEFAULT_THROTTLE_TEMPLATE,
         help="Throttle template")
-    parser.add_argument(
+
+    ed_group = parser.add_argument_group("Elite:Dangerous options")
+    ed_group.add_argument(
         '--ed_tmw_stick', default=DEFAULT_ED_STICK,
         help="Elite Dangerous device name for Thrustmaster Warthog joystick")
-    parser.add_argument(
+    ed_group.add_argument(
         '--ed_tmw_throttle', default=DEFAULT_ED_THROTTLE,
         help="Elite Dangerous device name for Thrustmaster Warthog throttle/"
              "control panel")
-    parser.add_argument(
+    ed_group.add_argument(
         '--ed_mfg_crosswind', default=DEFAULT_ED_MFG_CROSSWIND_NAME,
         help="Elite Dangerous device name for MFG Crosswind rudder pedals")
-    parser.add_argument(
+    ed_group.add_argument(
         '--ed_horizons', action='store_true',
         help="Include bindings for Elite Dangerous: Horizons (lander buggy)")
-    parser.add_argument(
+
+    cosmetic_group = parser.add_argument_group("Cosmetic options")
+    cosmetic_group.add_argument(
+        '--title', type=str,
+        help="Title")
+    cosmetic_group.add_argument(
+        '--subtitle', type=str,
+        help="Subtitle")
+    cosmetic_group.add_argument(
+        '--rgbtitle', type=rgb_tuple_from_csv, default=DEFAULT_RGB_TITLE,
+        help="RGB colours for title/subtitle")
+    cosmetic_group.add_argument(
         '--rgbanalogue', type=rgb_tuple_from_csv, default=DEFAULT_RGB_ANALOGUE,
         help="RGB colours for analogue devices")
-    parser.add_argument(
+    cosmetic_group.add_argument(
         '--rgbmomentary', type=rgb_tuple_from_csv,
         default=DEFAULT_RGB_MOMENTARY,
         help="RGB colours for momentary switches (switches that deactivate "
              "when released)")
-    parser.add_argument(
+    cosmetic_group.add_argument(
         '--rgbsticky', type=rgb_tuple_from_csv, default=DEFAULT_RGB_STICKY,
         help="RGB colours for sticky switches (switches that keep their "
              "position when released)")
-    parser.add_argument(
-        '--showmapping', action='store_true',
-        help="Print mapping to stdout")
-    parser.add_argument(
-        '--showrects', action='store_true',
-        help="Debugging option: show text rectangles")
-    parser.add_argument(
+    cosmetic_group.add_argument(
         '--ttf', default=DEFAULT_TRUETYPE_FILE,
         help="TrueType font file")
-    parser.add_argument('--verbose', action='count', default=0, help="Verbose")
-    parser.add_argument(
-        '--wrap', action='count', default=0, help="Wrap text lines")
+    cosmetic_group.add_argument(
+        '--wrap', action='store_true', help="Wrap text lines")
+
+    debug_group = parser.add_argument_group("Debug options")
+    debug_group.add_argument(
+        '--showmapping', action='store_true',
+        help="Print mapping to stdout")
+    debug_group.add_argument(
+        '--showrects', action='store_true',
+        help="Debugging option: show text rectangles")
+    debug_group.add_argument(
+        '--verbose', action='store_true', help="Verbose")
+
     args = parser.parse_args()
+    config = Config(
+        format=InputFormat[args.format],
+        input=args.input,
 
-    assert args.input is not None or args.format == 'demo', (
-        "Must specify input unless using 'demo' mode; use --help for help"
+        ed_tmw_stick=args.ed_tmw_stick,
+        ed_tmw_throttle=args.ed_tmw_throttle,
+        ed_mfg_crosswind=args.ed_mfg_crosswind,
+        ed_horizons=args.ed_horizons,
+
+        title=args.title,
+        subtitle=args.subtitle,
+        rgbtitle=args.rgbtitle,
+        rgbanalogue=args.rgbanalogue,
+        rgbmomentary=args.rgbmomentary,
+        rgbsticky=args.rgbsticky,
+        ttf=args.ttf,
+        wrap=args.wrap,
+
+        showmapping=args.showmapping,
+        showrects=args.showrects,
+        verbose=args.verbose,
     )
-
-    logging.basicConfig(level=logging.DEBUG if args.verbose >= 1
+    logging.basicConfig(level=logging.DEBUG if config.verbose
                         else logging.INFO)
 
     logger.info("Thrustmaster Warthog binding diagram generator")
@@ -1072,7 +1228,7 @@ Dangerous\Options\Bindings".
                 "http://forums.eagle.ru/showthread.php?t=102016")
     logger.debug("args: {}".format(args))
 
-    mapping = get_mapping(args)
+    mapping = get_mapping(config)
     if args.showmapping:
         print(json.dumps(mapping, sort_keys=True,
                          indent=4, separators=(',', ': ')))
@@ -1082,15 +1238,19 @@ Dangerous\Options\Bindings".
         placemap=merge_dicts(TMW_STICK_MAP, MFG_CROSSWIND_MAP),
         template=args.joytemplate,
         outfile=args.joyout,
-        cmdargs=args,
-        extralabels=CROSSWIND_EXTRA_LABELS + TMW_STICK_EXTRA_LABELS
+        config=config,
+        extralabels=(
+            CROSSWIND_EXTRA_LABELS +
+            TMW_STICK_EXTRA_LABELS +
+            make_title_labels(config)
+        )
     )
     make_picture(
         descmap=mapping[TMW_THROTTLE_NAME],
         placemap=TMW_THROTTLE_MAP,
         template=args.throttemplate,
         outfile=args.throtout,
-        cmdargs=args,
+        config=config,
         extralabels=TMW_THROTTLE_EXTRA_LABELS
     )
     composite_side_by_side(args.compout,
