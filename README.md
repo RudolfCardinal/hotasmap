@@ -6,7 +6,7 @@ rudder pedals. Takes plain JSON input (for which it can generate a template),
 or Elite:Dangerous key mapping files.
 
 ## Usage
-
+    
     usage: hotas_map.py [-h] [--format {blank,debug,demo,ed,json}] [--input INPUT]
                         [--joyout JOYOUT] [--throtout THROTOUT]
                         [--compout COMPOUT] [--joytemplate JOYTEMPLATE]
@@ -45,12 +45,12 @@ or Elite:Dangerous key mapping files.
     
     Input options:
       --format {blank,debug,demo,ed,json}
-                            Input format. Possible options: blank: Create a blank
-                            mapping (for pen-and-paper editing) // debug: Fill all
-                            boxes with text // demo: Demonstrate by printing
-                            switch names // ed: Elite:Dangerous binding file
-                            (.binds) // json: JSON (.json; same format produced by
-                            --showmapping) (default: json)
+                            Input format. Possible options: ~~~ blank: Create a
+                            blank mapping (for pen-and-paper editing) // debug:
+                            Fill all boxes with text // demo: Demonstrate by
+                            printing switch names // ed: Elite:Dangerous binding
+                            file (.binds) // json: JSON (.json; same format
+                            produced by --showmapping) ~~~ (default: json)
       --input INPUT         Input file (unless 'demo' mode is used) (default:
                             None)
     

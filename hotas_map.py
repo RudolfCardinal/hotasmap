@@ -1190,7 +1190,7 @@ def main():
     input_group.add_argument(
         '--format', type=str, choices=format_k,
         default=InputFormat.json.name,
-        help=f"Input format. Possible options: {format_desc}")
+        help=f"Input format. Possible options: ~~~ {format_desc} ~~~")
     input_group.add_argument(
         '--input', default=None,
         help="Input file (unless 'demo' mode is used)")
