@@ -37,6 +37,10 @@ VERSION HISTORY
   - Added demo Elite and JSON files.
   - Star Wars: Squadrons specimen (as JSON).
 
+* 2023-01-01
+
+  - Give text a bit more room.
+
 """
 
 # =============================================================================
