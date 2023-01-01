@@ -19,21 +19,22 @@ COMPOSITE_OUT="${OUTPUT_DIR}/star_wars_squadrons_composite.png"
     --title "Star Wars: Squadrons" \
     --subtitle "${DEVICES_TITLE}" \
     --wrap_linesep " │ " \
-    --extra_text "CONTROLS → ADVANCED:
+    --extra_text "CONTROLS → FLIGHT STICK:
+► Flight stick 1... = Joystick - HOTAS...
+► Flight stick 2... = Throttle - HOTAS...
+► Flight stick 3... = MFG Crosswind v2
+CONTROLS → ADVANCED:
 ► Invert flight = OFF
 ► Power management = ADVANCED
-CONTROLS → FLIGHT STICK:
-► Flight stick 1 device =
-      Joystick - HOTAS Warthog
-► Flight stick 2 device =
-      Throttle - HOTAS Warthog
-► Flight st. 3 dev. = MFG Crosswind v2
+► Shield focus... selector... mode = TOGGLE
+► Comms wheel input mode = TOGGLE
+► Targeting wheel input mode = TOGGLE
 
-KEY:
-○ Press
-○○ Double-tap
-●… Hold
-[F] Flight, [M] Menus, [H] Hangar"
+KEY: ○ Press  //  ○○ Double-tap  // ●… Hold
+     [F] Flight, [M] Menus, [H] Hangar
+NB: L aux. = usually repair,
+R aux. = usually missile,
+countermeasures can be missiles"
 
 rm "${JOYSTICK_OUT}"
 rm "${THROTTLE_OUT}"

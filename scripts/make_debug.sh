@@ -17,6 +17,7 @@ COMPOSITE_OUT="${OUTPUT_DIR}/debug_composite.png"
     --title "${DEVICES_TITLE}" \
     --subtitle "Layout debugging" \
     --wrap \
+    --showrects \
     --extra_text "1  4567890123456789012345678901234567890
 2  4567890123456789012345678901234567890
 3  4567890123456789012345678901234567890

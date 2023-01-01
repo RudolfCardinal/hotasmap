@@ -1,7 +1,7 @@
 {
     "mfg_crosswind_pedals": {
         "Rudder": [
-            "Yaw R / Yaw L [F,H]"
+            "Yaw L ←|→ Yaw R [F,H]"
         ]
     },
     "thrustmaster_warthog_joystick": {
@@ -55,14 +55,15 @@
             "[M] Additional Function Two"
         ],
         "S5_MMC": [
+            "○ Fire R auxiliary [F]",
+            "○○ Dumb-fire R aux. [F]",
             "[M] Confirm"
         ],
         "S7_TMS_Up": [
             "Cycle targets [F]"
         ],
         "S8_TMS_Right": [
-            "○ Ping target [F]",
-            "○○ Ack. ping [F]",
+            "○ Ping target [F]; ○○ Ack. ping [F]",
             "●… Comms wheel [F]",
             "[H] ○ Emote wheel"
         ],
@@ -126,10 +127,7 @@
             "○ Fire L auxiliary [F]",
             "○○ Dumb-fire L aux. [F]"
         ],
-        "S12_ChinaHat_Backward": [
-            "○ Fire R auxiliary [F]",
-            "○○ Dumb-fire R aux. [F]"
-        ],
+        "S12_ChinaHat_Backward": [],
         "S13_PinkieSwitch_Forward": [],
         "S14_PinkieSwitch_Backward": [],
         "S15_LeftThrottleButton": [
@@ -156,7 +154,8 @@
         "S28_AutopilotMode_Down": [],
         "S29_RightEngineIdle": [],
         "S2_ThumbHat_Press": [
-            "[M] Menu"
+            "[M] Menu",
+            "●… Recentre VR"
         ],
         "S30_LeftEngineIdle": [],
         "S31_LeftEngineOperateUp": [],
